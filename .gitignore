@@ -1,0 +1,38 @@
+# Root dependencies/artifacts
+node_modules/
+*.log
+logs/
+coverage/
+.env
+.env.*
+!.env.example
+
+# Frontend
+frontend/node_modules/
+frontend/build/
+frontend/.react-router/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Backend
+nestjs-ecommerce/node_modules/
+nestjs-ecommerce/dist/
+nestjs-ecommerce/coverage/
+nestjs-ecommerce/.env
+nestjs-ecommerce/.env.*
+!nestjs-ecommerce/.env.example
+
+# Optional: avoid accidental nested repo capture if this becomes a monorepo
+frontend/.git/
+nestjs-ecommerce/.git/
+
+# OS/editor temp
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+*.swp
+*.swo
+.vscode/
+.idea/

@@ -1,0 +1,24 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+/node_modules/
+
+# React Router
+/.react-router/
+/build/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test artifacts
+/coverage
+
+# Temp
+*.tmp
+*.temp

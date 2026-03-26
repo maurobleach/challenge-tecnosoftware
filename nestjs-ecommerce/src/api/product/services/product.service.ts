@@ -1,0 +1,159 @@
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { EntityManager } from 'typeorm';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { CreateProductDto, ProductDetailsDto } from '../dto/product.dto';
+import { Category } from '../../../database/entities/category.entity';
+import { Product } from 'src/database/entities/product.entity';
+import { errorMessages } from 'src/errors/custom';
+import { validate } from 'class-validator';
+import { successObject } from 'src/common/helper/sucess-response.interceptor';
+import {
+  ProductActivatedEvent,
+  ProductCreatedEvent,
+  ProductEvents,
+} from 'src/common/events/product.events';
+import { EventsService } from 'src/common/events/events.service';
+
+@Injectable()
+export class ProductService {
+  constructor(
+    @InjectEntityManager()
+    private readonly entityManager: EntityManager,
+    private readonly eventsService: EventsService,
+  ) {}
+
+  async getProduct() {
+    const product = await this.entityManager.find(Product);
+
+    if (!product) throw new NotFoundException(errorMessages.product.notFound);
+
+    return product;
+  }
+
+  async createProduct(data: CreateProductDto, merchantId: number) {
+    const category = await this.entityManager.findOne(Category, {
+      where: {
+        id: data.categoryId,
+      },
+    });
+
+    if (!category) throw new NotFoundException(errorMessages.category.notFound);
+
+    const product = await this.entityManager.create(Product, {
+      category,
+      merchantId,
+    });
+    const savedProduct = await this.entityManager.save(product);
+    const payload: ProductCreatedEvent = { productId: savedProduct.id };
+    this.eventsService.emit(ProductEvents.Created, payload);
+    return savedProduct;
+  }
+
+  async addProductDetails(
+    productId: number,
+    body: ProductDetailsDto,
+    merchantId: number,
+  ) {
+    const result = await this.entityManager
+      .createQueryBuilder()
+      .update<Product>(Product)
+      .set({
+        ...body,
+      })
+      .where('id = :id', { id: productId })
+      .andWhere('merchantId = :merchantId', { merchantId })
+      .returning(['id'])
+      .execute();
+    if (result.affected < 1)
+      throw new NotFoundException(errorMessages.product.notFound);
+
+    const isValid = await this.validate(productId);
+    if (isValid) {
+      const activateResult = await this.entityManager
+        .createQueryBuilder()
+        .update<Product>(Product)
+        .set({
+          isActive: true,
+        })
+        .where('id = :id', { id: productId })
+        .andWhere('merchantId = :merchantId', { merchantId })
+        .andWhere('isActive = :isActive', { isActive: false })
+        .returning(['id'])
+        .execute();
+
+      if (activateResult.affected > 0) {
+        const payload: ProductActivatedEvent = { productId };
+        this.eventsService.emit(ProductEvents.Activated, payload);
+      }
+    } else {
+      const deactivateResult = await this.entityManager
+        .createQueryBuilder()
+        .update<Product>(Product)
+        .set({
+          isActive: false,
+        })
+        .where('id = :id', { id: productId })
+        .andWhere('merchantId = :merchantId', { merchantId })
+        .andWhere('isActive = :isActive', { isActive: true })
+        .returning(['id'])
+        .execute();
+
+      if (deactivateResult.affected > 0) {
+        // Product is kept inactive when details are not valid.
+      }
+    }
+
+    return result.raw[0];
+  }
+
+  async activateProduct(productId: number, merchantId: number) {
+    if (!(await this.validate(productId)))
+      throw new ConflictException(errorMessages.product.notFulfilled);
+
+    const result = await this.entityManager
+      .createQueryBuilder()
+      .update<Product>(Product)
+      .set({
+        isActive: true,
+      })
+      .where('id = :id', { id: productId })
+      .andWhere('merchantId = :merchantId', { merchantId })
+      .returning(['id', 'isActive'])
+      .execute();
+
+    return result.raw[0];
+  }
+
+  async validate(productId: number) {
+    const product = await this.entityManager.findOne(Product, {
+      where: {
+        id: productId,
+      },
+    });
+    if (!product) throw new NotFoundException(errorMessages.product.notFound);
+    const errors = await validate(product);
+
+    if (errors.length > 0) return false;
+
+    return true;
+  }
+
+  async deleteProduct(productId: number, merchantId: number) {
+    const result = await this.entityManager
+      .createQueryBuilder()
+      .delete()
+      .from(Product)
+      .where('id = :productId', { productId })
+      .andWhere('merchantId = :merchantId', { merchantId })
+      .execute();
+
+    if (result.affected < 1)
+      throw new NotFoundException(errorMessages.product.notFound);
+
+    return successObject;
+  }
+}
