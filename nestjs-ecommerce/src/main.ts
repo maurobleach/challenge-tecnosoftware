@@ -8,6 +8,6 @@ async function bootstrap() {
   app.enableCors({ origin: frontendUrl, credentials: true });
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   const port = parseInt(process.env.PORT || '3000', 10);
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 }
 bootstrap();
