@@ -1,6 +1,6 @@
 # Challenge TecnoSoftware
 
-#Problemas iniciales detectados
+## Problemas iniciales detectados
 - Problemas de seguridad en la gestión de autenticación.
 - Configuración incorrecta de variables de entorno, impidiendo la conexión a la base de datos.
 - Errores de tipado en entidades como User y Category.
@@ -9,7 +9,7 @@
 - Errores en la migración: nombres de columnas mal definidos en Inventory.
 - Existencia de entidades sin un dominio claro o sin integración en el flujo de negocio.
 
-#Implementación de eventos
+## Implementación de eventos
 
 Se incorporó un enfoque event-driven interno mediante eventos de dominio:
 
@@ -18,7 +18,7 @@ Se incorporó un enfoque event-driven interno mediante eventos de dominio:
 - product.activated: Se dispara cuando el producto cuenta con la información mínima requerida (title, description, etc.).
 - Reduce la lógica en endpoints y simplifica la interacción desde el frontend.
 
-#Decisiones técnicas
+## Decisiones técnicas
 - Se mantuvo un monolito modular para reducir la complejidad asociada a microservicios.
 - Se implementó un enfoque event-driven interno utilizando eventos de dominio.
 - Se creó un endpoint para obtener categorías precargadas mediante migración.
@@ -26,6 +26,7 @@ Se incorporó un enfoque event-driven interno mediante eventos de dominio:
 - Se desacopló el módulo de productos del módulo de inventario mediante eventos.
 - El frontend fue diseñado de forma simple y clara, alineado con las capacidades del backend.
 
+## La Aplicacion:
 
 Configuracion fullstack simple para ejecutar un frontend React/Vite y un backend NestJS con PostgreSQL en Docker.
 
