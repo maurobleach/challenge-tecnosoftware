@@ -1,14 +1,13 @@
 # Challenge TecnoSoftware
 
-Configuracion fullstack simple para ejecutar frontend React/Vite y backend NestJS con PostgreSQL.
+Configuracion fullstack para ejecutar frontend React/Vite y backend NestJS con PostgreSQL, todo dockerizado.
 
 ## Stack
 
 - Frontend: React + Vite + React Router
 - Backend: NestJS + TypeORM
 - Base de datos: PostgreSQL 15
-- Local DB: Docker Compose
-- Deploy sugerido: Railway
+- Orquestacion: Docker Compose
 
 ## Problemas iniciales detectados
 
@@ -27,7 +26,7 @@ Configuracion fullstack simple para ejecutar frontend React/Vite y backend NestJ
 - Se desacoplo Product de Inventory usando eventos para reducir acoplamiento entre modulos.
 - Se incorporo endpoint para categorias precargadas por migracion.
 - Se completo la logica de Inventory alineada con el dominio ecommerce.
-- Se priorizo simplicidad operativa con deploy local por script unico y opcion Railway.
+- Se priorizo simplicidad operativa con un unico script para dev y prod.
 
 ## Implementacion de eventos
 
@@ -45,26 +44,22 @@ Configuracion fullstack simple para ejecutar frontend React/Vite y backend NestJ
 |   `-- setup.sh
 |-- frontend/
 |   |-- .env.example
-|   |-- package.json
-|   `-- railway.json
+|   |-- Dockerfile
+|   `-- package.json
 `-- nestjs-ecommerce/
     |-- .env.example
-    |-- package.json
-    `-- railway.json
+    |-- Dockerfile
+    `-- package.json
 ```
 
-## Requisitos locales
+## Requisitos
 
-- Node.js 20+
-- npm 10+
 - Docker + Docker Compose
 - Bash (Git Bash, WSL o Linux/macOS)
 
 ## Variables de entorno
 
 ### Raiz (`.env`)
-
-Se usa para levantar PostgreSQL local con Docker:
 
 ```env
 POSTGRES_USER=hassan
@@ -92,7 +87,7 @@ ADMIN_EMAIL=admin@admin.com
 ADMIN_PASSWORD=12345678
 ```
 
-Nota: `DATABASE_URL` es opcional en local, pero recomendado para Railway.
+Nota: en Docker Compose, `DATABASE_HOST` se sobreescribe a `postgres` automaticamente.
 
 ### Frontend (`frontend/.env`)
 
@@ -100,7 +95,7 @@ Nota: `DATABASE_URL` es opcional en local, pero recomendado para Railway.
 VITE_API_URL=/api
 ```
 
-## Script unico
+## Deploy con script unico
 
 Desde la raiz:
 
@@ -109,81 +104,38 @@ Desde la raiz:
 ./scripts/setup.sh prod
 ```
 
-### Que hace
+### Modo `dev`
 
-1. Instala dependencias de frontend y backend.
-2. Levanta PostgreSQL con Docker.
-3. Espera disponibilidad de DB.
-4. Ejecuta migraciones.
-5. En `dev`, ejecuta seed.
-6. Inicia backend y frontend.
+- Levanta `postgres`, `backend-dev` y `frontend-dev` en Docker.
+- Corre migraciones y seed antes de iniciar la app.
+- Deja logs en foreground.
 
-## Opciones de deploy sugeridas
+URLs:
 
-Este proyecto se puede desplegar de dos formas simples:
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:3000`
 
-1. Con `./scripts/setup.sh` para entorno local o servidor simple con Docker.
-2. Con Railway para un deploy gestionado.
+### Modo `prod`
 
-## Deploy en Railway (opcional)
+- Build de imagenes `backend` y `frontend`.
+- Levanta stack en segundo plano.
+- Ejecuta migraciones en contenedor de backend.
 
-Se agregaron:
+URLs:
 
-- `nestjs-ecommerce/railway.json`
-- `frontend/railway.json`
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:3000`
 
-Con esto, Railway toma build/start/pre-deploy desde el repo.
+Logs en prod:
 
-### 1. Crear proyecto y servicios
-
-En Railway:
-
-1. Crea un proyecto nuevo.
-2. Agrega servicio `PostgreSQL` desde `+ New`.
-3. Agrega servicio `backend` desde tu repo GitHub.
-4. Agrega servicio `frontend` desde tu repo GitHub.
-
-### 2. Configurar monorepo
-
-Configura `Root Directory`:
-
-- Servicio backend: `nestjs-ecommerce`
-- Servicio frontend: `frontend`
-
-Y en cada servicio define `Config File Path` (ruta absoluta desde la raiz del repo):
-
-- Backend: `/nestjs-ecommerce/railway.json`
-- Frontend: `/frontend/railway.json`
-
-### 3. Variables del backend
-
-En el servicio backend define:
-
-```env
-NODE_ENV=production
-DATABASE_URL=${{Postgres.DATABASE_URL}}
-JWT_SECRET=<tu-secret>
-ADMIN_EMAIL=admin@admin.com
-ADMIN_PASSWORD=<tu-password>
-FRONTEND_URL=https://${{frontend.RAILWAY_PUBLIC_DOMAIN}}
-BASE_URL=https://${{backend.RAILWAY_PUBLIC_DOMAIN}}
+```bash
+docker compose --profile prod logs -f
 ```
 
-### 4. Variables del frontend
+Apagar stack:
 
-En el servicio frontend define:
-
-```env
-VITE_API_URL=https://${{backend.RAILWAY_PUBLIC_DOMAIN}}
+```bash
+docker compose --profile dev down
+# o
+docker compose --profile prod down
 ```
-
-### 5. Deploy
-
-- Haz push a `main`.
-- Railway va a desplegar ambos servicios.
-- El backend ejecuta migraciones automaticamente en `preDeployCommand`.
-
-### 6. URLs finales
-
-- Frontend: dominio publico del servicio frontend.
-- Backend API: dominio publico del servicio backend.
