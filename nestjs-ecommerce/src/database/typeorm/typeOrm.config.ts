@@ -16,14 +16,20 @@ const migrationsPath = isTsRuntime
   : 'dist/database/migration/history/*.js';
 const databaseUrl = process.env.DATABASE_URL;
 const parsedDatabaseUrl = databaseUrl ? new URL(databaseUrl) : null;
-const databaseHost = process.env.DATABASE_HOST || parsedDatabaseUrl?.hostname;
+// In managed platforms (Railway), DATABASE_URL must win over local fallback vars.
+const databaseHost = parsedDatabaseUrl?.hostname || process.env.DATABASE_HOST;
 const databasePort =
-  process.env.DATABASE_PORT || parsedDatabaseUrl?.port || '5432';
+  parsedDatabaseUrl?.port || process.env.DATABASE_PORT || '5432';
 const databaseName =
-  process.env.DATABASE_NAME || parsedDatabaseUrl?.pathname.replace('/', '');
-const databaseUser = process.env.DATABASE_USER || parsedDatabaseUrl?.username;
+  parsedDatabaseUrl?.pathname.replace('/', '') || process.env.DATABASE_NAME;
+const databaseUser = parsedDatabaseUrl?.username || process.env.DATABASE_USER;
 const databasePassword =
-  process.env.DATABASE_PASSWORD || parsedDatabaseUrl?.password;
+  parsedDatabaseUrl?.password || process.env.DATABASE_PASSWORD;
+if (!databaseHost || !databaseName || !databaseUser) {
+  throw new Error(
+    'Database configuration is incomplete. Set DATABASE_URL or DATABASE_HOST/DATABASE_NAME/DATABASE_USER.',
+  );
+}
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
