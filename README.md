@@ -1,40 +1,39 @@
 # Challenge TecnoSoftware
 
-## Problemas iniciales detectados
-- Problemas de seguridad en la gestión de autenticación.
-- Configuración incorrecta de variables de entorno, impidiendo la conexión a la base de datos.
-- Errores de tipado en entidades como User y Category.
-- Uso incorrecto de decoradores en la entidad Product.
-- Lógica de la entidad Inventory inexistente o incompleta.
-- Errores en la migración: nombres de columnas mal definidos en Inventory.
-- Existencia de entidades sin un dominio claro o sin integración en el flujo de negocio.
-
-## Implementación de eventos
-
-Se incorporó un enfoque event-driven interno mediante eventos de dominio:
-
-- product.created: Crea automáticamente un registro de inventario al generarse un nuevo producto.
-- Permite desacoplar la creación del producto de la gestión de stock.
-- product.activated: Se dispara cuando el producto cuenta con la información mínima requerida (title, description, etc.).
-- Reduce la lógica en endpoints y simplifica la interacción desde el frontend.
-
-## Decisiones técnicas
-- Se mantuvo un monolito modular para reducir la complejidad asociada a microservicios.
-- Se implementó un enfoque event-driven interno utilizando eventos de dominio.
-- Se creó un endpoint para obtener categorías precargadas mediante migración.
-- Se desarrolló la lógica del módulo Inventory.
-- Se desacopló el módulo de productos del módulo de inventario mediante eventos.
-- El frontend fue diseñado de forma simple y clara, alineado con las capacidades del backend.
-
-## La Aplicacion:
-
-Configuracion fullstack simple para ejecutar un frontend React/Vite y un backend NestJS con PostgreSQL en Docker.
+Configuracion fullstack simple para ejecutar frontend React/Vite y backend NestJS con PostgreSQL.
 
 ## Stack
 
 - Frontend: React + Vite + React Router
 - Backend: NestJS + TypeORM
-- Base de datos: PostgreSQL 15 (Docker Compose)
+- Base de datos: PostgreSQL 15
+- Local DB: Docker Compose
+- Deploy sugerido: Railway
+
+## Problemas iniciales detectados
+
+- Problemas de seguridad en la gestion de autenticacion.
+- Configuracion incorrecta de variables de entorno, afectando la conexion a base de datos.
+- Errores de tipado en entidades clave (por ejemplo User y Category).
+- Uso incorrecto de decoradores en la entidad Product.
+- Logica de Inventory inexistente o incompleta.
+- Errores en migraciones (nombres de columnas inconsistentes en Inventory).
+- Entidades sin dominio claro o baja integracion con el flujo principal.
+
+## Decisiones tecnicas
+
+- Se mantuvo un monolito modular para reducir complejidad innecesaria.
+- Se implemento un enfoque event-driven interno mediante eventos de dominio.
+- Se desacoplo Product de Inventory usando eventos para reducir acoplamiento entre modulos.
+- Se incorporo endpoint para categorias precargadas por migracion.
+- Se completo la logica de Inventory alineada con el dominio ecommerce.
+- Se priorizo simplicidad operativa con deploy local por script unico y opcion Railway.
+
+## Implementacion de eventos
+
+- `product.created`: crea automaticamente un registro de inventario al crear producto.
+- `product.activated`: se dispara cuando el producto cumple informacion minima requerida.
+- Beneficio: menor logica acoplada en endpoints y flujo frontend mas simple.
 
 ## Estructura
 
@@ -46,13 +45,15 @@ Configuracion fullstack simple para ejecutar un frontend React/Vite y un backend
 |   `-- setup.sh
 |-- frontend/
 |   |-- .env.example
-|   `-- package.json
+|   |-- package.json
+|   `-- railway.json
 `-- nestjs-ecommerce/
     |-- .env.example
-    `-- package.json
+    |-- package.json
+    `-- railway.json
 ```
 
-## Requisitos
+## Requisitos locales
 
 - Node.js 20+
 - npm 10+
@@ -63,7 +64,7 @@ Configuracion fullstack simple para ejecutar un frontend React/Vite y un backend
 
 ### Raiz (`.env`)
 
-Se usa para Docker Compose:
+Se usa para levantar PostgreSQL local con Docker:
 
 ```env
 POSTGRES_USER=hassan
@@ -78,15 +79,20 @@ POSTGRES_PORT=5432
 PORT=3000
 BASE_URL=http://localhost:3000
 FRONTEND_URL=http://localhost:5173
+
 DATABASE_HOST=localhost
 DATABASE_PORT=5432
 DATABASE_NAME=ecommercedb
 DATABASE_USER=hassan
 DATABASE_PASSWORD=password
+DATABASE_URL=
+
 JWT_SECRET=change-me-in-production
 ADMIN_EMAIL=admin@admin.com
 ADMIN_PASSWORD=12345678
 ```
+
+Nota: `DATABASE_URL` es opcional en local, pero recomendado para Railway.
 
 ### Frontend (`frontend/.env`)
 
@@ -94,70 +100,90 @@ ADMIN_PASSWORD=12345678
 VITE_API_URL=/api
 ```
 
-> Si faltan archivos `.env`, el script los crea automaticamente desde los `.env.example`.
-
-## Uso rapido (script unico)
+## Script unico
 
 Desde la raiz:
 
 ```bash
 ./scripts/setup.sh dev
-```
-
-o
-
-```bash
 ./scripts/setup.sh prod
 ```
 
-### Que hace el script
+### Que hace
 
-1. Instala dependencias de backend y frontend (`npm ci`).
-2. Levanta PostgreSQL con Docker Compose.
-3. Espera hasta que la DB este disponible.
-4. Ejecuta migraciones del backend.
-5. En `dev`, ejecuta seeders.
+1. Instala dependencias de frontend y backend.
+2. Levanta PostgreSQL con Docker.
+3. Espera disponibilidad de DB.
+4. Ejecuta migraciones.
+5. En `dev`, ejecuta seed.
 6. Inicia backend y frontend.
 
-## Ejecucion manual (opcional)
+## Opciones de deploy sugeridas
 
-### Desarrollo
+Este proyecto se puede desplegar de dos formas simples:
 
-```bash
-docker compose up -d postgres
-cd nestjs-ecommerce && npm ci && npm run migration:run && npm run seed:run && npm run start:dev
-cd frontend && npm ci && npm run dev
+1. Con `./scripts/setup.sh` para entorno local o servidor simple con Docker.
+2. Con Railway para un deploy gestionado.
+
+## Deploy en Railway (opcional)
+
+Se agregaron:
+
+- `nestjs-ecommerce/railway.json`
+- `frontend/railway.json`
+
+Con esto, Railway toma build/start/pre-deploy desde el repo.
+
+### 1. Crear proyecto y servicios
+
+En Railway:
+
+1. Crea un proyecto nuevo.
+2. Agrega servicio `PostgreSQL` desde `+ New`.
+3. Agrega servicio `backend` desde tu repo GitHub.
+4. Agrega servicio `frontend` desde tu repo GitHub.
+
+### 2. Configurar monorepo
+
+Configura `Root Directory`:
+
+- Servicio backend: `nestjs-ecommerce`
+- Servicio frontend: `frontend`
+
+Y en cada servicio define `Config File Path` (ruta absoluta desde la raiz del repo):
+
+- Backend: `/nestjs-ecommerce/railway.json`
+- Frontend: `/frontend/railway.json`
+
+### 3. Variables del backend
+
+En el servicio backend define:
+
+```env
+NODE_ENV=production
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+JWT_SECRET=<tu-secret>
+ADMIN_EMAIL=admin@admin.com
+ADMIN_PASSWORD=<tu-password>
+FRONTEND_URL=https://${{frontend.RAILWAY_PUBLIC_DOMAIN}}
+BASE_URL=https://${{backend.RAILWAY_PUBLIC_DOMAIN}}
 ```
 
-### Produccion simple
+### 4. Variables del frontend
 
-```bash
-docker compose up -d postgres
-cd nestjs-ecommerce && npm ci && npm run migration:run && npm run build && npm run start:prod
-cd frontend && npm ci && VITE_API_URL=http://localhost:3000 npm run build && PORT=5173 npm run start
+En el servicio frontend define:
+
+```env
+VITE_API_URL=https://${{backend.RAILWAY_PUBLIC_DOMAIN}}
 ```
 
-## Docker
+### 5. Deploy
 
-Solo se dockeriza PostgreSQL para mantener el deploy simple.
+- Haz push a `main`.
+- Railway va a desplegar ambos servicios.
+- El backend ejecuta migraciones automaticamente en `preDeployCommand`.
 
-- Archivo principal: `docker-compose.yml` en la raiz.
-- Servicio: `postgres`.
-- Volumen persistente: `postgres-data`.
+### 6. URLs finales
 
-## Subir a GitHub (basico)
-
-```bash
-git init
-git add .
-git commit -m "chore: setup fullstack run flow"
-git branch -M main
-git remote add origin <URL_DEL_REPO>
-git push -u origin main
-```
-
-Si `frontend/` o `nestjs-ecommerce/` contienen su propio `.git`, removelos antes de `git add .` para evitar repositorios embebidos:
-
-```bash
-rm -rf frontend/.git nestjs-ecommerce/.git
-```
+- Frontend: dominio publico del servicio frontend.
+- Backend API: dominio publico del servicio backend.
